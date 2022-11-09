@@ -278,10 +278,11 @@ int main(int argc, char** argv)
 
 		Point3D startPt{ 0,0,0 };
 		Point3D directionVec{ 0,0,1 };
-		double angle{ 360.0 };
+		double angle{ 270.0 };
 		int m{ 8 };
 		std::vector<Point3D> controlPts{ {10, 0, 20}, {10, 0, 30}, {20, 0, 30}, {30, 0, 30}, {30, 0, 20}, {30, 0, 10}, {20, 0, 10}, {10, 0, 10}, {10, 0, 20} };
 		std::vector<double> wj{ 1, 0.7071, 1, 0.7071, 1, 0.7071, 1, 0.7071, 1 };
+		std::vector<double> V{ 0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1 };
 
 		int n{};
 		std::vector<double> U;
@@ -297,7 +298,7 @@ int main(int argc, char** argv)
 
 		//torus.makeKnots();
 		torus.assignUKnots(U);
-		torus.assignVKnots(U);
+		torus.assignVKnots(V);
 
 		glutInit(&argc, argv);
 		glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);

@@ -181,7 +181,7 @@ export void MakeRevolvedSurface(const Point3D& S, const Point3D& T, double theta
 
 	n = 2 * narcs;
 
-	double wm{ cos(dtheta * std::numbers::pi / 360.0) }; // dtheta / 2.0 is base angle
+	double wm{ std::cos(dtheta * std::numbers::pi / 360.0) }; // dtheta / 2.0 is base angle
 	double angle{ 0.0 }; // compute sine and cosine only once
 	std::vector<double> cosines(narcs + 1), sines(narcs + 1);
 
@@ -189,7 +189,7 @@ export void MakeRevolvedSurface(const Point3D& S, const Point3D& T, double theta
 	{
 		angle += dtheta;
 		double radAngle{ angle * std::numbers::pi / 180.0 };
-		cosines[i] = cos(radAngle);
+		cosines[i] = std::cos(radAngle);
 		sines[i] = sin(radAngle);
 	}
 

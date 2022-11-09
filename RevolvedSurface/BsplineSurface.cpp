@@ -102,9 +102,10 @@ void BsplineSurface::basisFuns(int span, double x, int degree, std::vector<doubl
 	}
 }
 
-// algorithm A3.5 pp. 103
 void BsplineSurface::surfacePoint(double u, double v, Point3D& S)
 {
+	// algorithm A3.5 pp. 103
+	// 
 	// add num check
 
 	int uspan{ findKnotSpan(static_cast<int>(std::ssize(controlPoints)), p_degree, u, uKnots) };
@@ -125,6 +126,40 @@ void BsplineSurface::surfacePoint(double u, double v, Point3D& S)
 		}
 
 		S.x = S.y = S.z = 0.0;
+		for (int L{}; L <= q_degree; ++L)
+		{
+			S.x += vBasis[L] * temp[L].x;
+			S.y += vBasis[L] * temp[L].y;
+			S.z += vBasis[L] * temp[L].z;
+		}
+	}
+}
+
+void BsplineSurface::surfacePointW(double u, double v, Point3D& S)
+{
+	// algorithm A4.3 pp. 134
+	// 
+	// add num check
+
+	int uspan{ findKnotSpan(static_cast<int>(std::ssize(controlPoints)), p_degree, u, uKnots) };
+	basisFuns(uspan, u, p_degree, uKnots, uBasis);
+	int vspan{ findKnotSpan(static_cast<int>(std::ssize(controlPoints.front())), q_degree, v, vKnots) };
+	basisFuns(vspan, v, q_degree, vKnots, vBasis);
+
+	std::vector<Point3D> temp(q_degree + 1);
+	double w{};
+
+	for (int L{}; L <= q_degree; ++L)
+	{
+		temp[L].x = temp[L].y = temp[L].z = 0.0;
+		for (int k{}; k <= p_degree; ++k)
+		{
+			temp[L].x += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].x;
+			temp[L].y += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].y;
+			temp[L].z += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].z;
+		}
+
+		S.x = S.y = S.z = w = 0.0;
 		for (int L{}; L <= q_degree; ++L)
 		{
 			S.x += vBasis[L] * temp[L].x;
