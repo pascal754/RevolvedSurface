@@ -2,291 +2,320 @@
 // by SM
 
 
+import <iostream>;
+import <array>;
+import <vector>;
+import <format>;
+import <numbers>;
+import <array>;
+import <stdexcept>;
+import <cmath>;
+#include <GL/glut.h>
 
-//import <iostream>;
-//import <array>;
-//import <vector>;
-//import <cmath>;
+import Point3D;
+import BsplineSurface;
+import RevolvedSurface;
 
-#include <iostream>
-#include <array>
-#include <vector>
-#include <format>
-#include <numbers>
-#include <cmath>
-
-const double epsilon{ 1e-6 };
-
-struct Point
+struct graphics
 {
-	double x{};
-	double y{};
-	double z{};
+	static const double LENGTH;
+	static const double oneOverSquareRoot2;
+	double tractionAngle{};
+	bool leftMouseButtonPressed{};
+	bool rightMouseButtonPressed{};
+	int lastX{}, lastY{};
+	double zoomScale{ LENGTH };
+	double aspectRatio{ 1.0 };
+	double xTranslation{}, yTranslation{};
+	double sNear{ -LENGTH }, sFar{ LENGTH };
+	std::array<double, 3> currentVec{}, prevVec{}, rotationAxis{};
+	GLdouble mxTransform[4][4]{ {-0.7071, -0.5, 0.5, 0.0}, {0.7071, -0.5, 0.5, 0.0}, {0.0, 0.7071, 0.7071, 0.0}, {0.0, 0.0, 0.0, 1.0} }; // isometric view
 };
 
-double VecNormalize(Point& pt)
+const double graphics::LENGTH{ 150.0 };
+const double graphics::oneOverSquareRoot2{ 1.0 / sqrt(2.0) };
+
+graphics g{};
+
+BsplineSurface torus{ 2, 2 };
+
+void ptTo3DVec(int x, int y, std::array<double, 3>& vec)
 {
-	// normalize vector
-	// return magnitude of the original vector
+	// x^2 + y^2 + z^2 == r^2, (r == 1)
 
-	double magnitude{ std::hypot(pt.x, pt.y, pt.z) };
-	pt.x /= magnitude;
-	pt.y /= magnitude;
-	pt.z /= magnitude;
+	int w{ glutGet(GLUT_WINDOW_WIDTH) };
+	int h{ glutGet(GLUT_WINDOW_HEIGHT) };
+	//std::cout << std::format("width: {}, heigh: {}\n", w, h);
 
-	return magnitude;
+	vec[0] = 2.0 * x / w - 1.0;
+	vec[1] = -2.0 * y / h + 1.0;
+	double hypotenuse{ std::hypot(vec[0], vec[1]) };
 
-}
-
-void PointToLines(Point& S, Point& T, Point& Pt, Point& O)
-{
-	// project Pt on the line passing S and pointing T
-	// S: starting point
-	// T: unit direction vector
-	// O: Projected Point
-
-	double dotProduct{ S.x * T.x + S.y * T.y + S.z * T.z };
-	O.x = S.x + (Pt.x - S.x) * T.x * T.x;
-	O.y = S.y + (Pt.y - S.y) * T.y * T.y;
-	O.z = S.z + (Pt.z - S.z) * T.z * T.z;
-}
-
-void VecCrossProd(const Point& a, const Point& b, Point& c)
-{
-	c.x = a.y * b.z - a.z * b.y;
-	c.y = a.z * b.x - a.x * b.z;
-	c.z = a.x * b.y - a.y * b.x;
-}
-
-bool Intersect3DLines(const Point& P0, const Point& T0, const Point& P2, const Point& T2, Point& Pt)
-{
-	/*
-	Original code from
-	http://paulbourke.net/geometry/pointlineplane/
-    Calculate the line segment PaPb that is the shortest route between
-    two lines P1P2 and P3P4. Calculate also the values of mua and mub where
-        Pa = P1 + mua (P2 - P1) (1)
-        Pb = P3 + mub (P4 - P3) (2)
-    Return true if Pa == Pb
-
-	In this algorithm
-	Input, (the point, tangent) pairs: (P0, T0), (P2, T2)
-	Output: Pt => intersection point if return value is true
-
-	Therefore, (1) and (2) become
-	Pa = P0 + mua * T0
-	Pb = P2 + mub * T2
-
-	Pa == Pb => inteersection point
-	*/
-
-	Point p13, p43, p21;
-
-	p13.x = P0.x - P2.x; // p13.x = P1.x - P3.x;
-	p13.y = P0.y - P2.y; // p13.y = P1.y - P3.y;
-	p13.z = P0.z - P2.z; // p13.z = P1.z - P3.z;
-
-	// p43 is T2
-	p43 = T2;
-
-	//p43.x = P4.x - P3.x;
-	//p43.y = P4.y - P3.y;
-	//p43.z = P4.z - P3.z;
-
-	if (std::abs(p43.x) < epsilon && std::abs(p43.y) < epsilon && std::abs(p43.z) < epsilon)
+	if (hypotenuse <= g.oneOverSquareRoot2) // x^2 + y^2 <= r^2 / 2
 	{
-		return false;
-	}
-
-	// p21 is T0
-	p21 = T0;
-
-	//p21.x = P2.x - P1.x;
-	//p21.y = P2.y - P1.y;
-	//p21.z = P2.z - P1.z;
-
-	if (std::abs(p21.x) < epsilon && std::abs(p21.y) < epsilon && std::abs(p21.z) < epsilon)
-	{
-		return false;
-	}
-
-	double d1343 { p13.x * p43.x + p13.y * p43.y + p13.z * p43.z};
-	double d4321 { p43.x * p21.x + p43.y * p21.y + p43.z * p21.z};
-	double d1321 { p13.x * p21.x + p13.y * p21.y + p13.z * p21.z};
-	double d4343 { p43.x * p43.x + p43.y * p43.y + p43.z * p43.z};
-	double d2121{ p21.x * p21.x + p21.y * p21.y + p21.z * p21.z };
-
-	double denom{ d2121 * d4343 - d4321 * d4321 };
-
-	if (std::abs(denom) < epsilon)
-	{
-		return false;
-	}
-
-	double numer{ d1343 * d4321 - d1321 * d4343 };
-
-	double mua{ numer / denom };
-	double mub{ (d1343 + d4321 * mua) / d4343 };
-
-	Point pa, pb;
-	pa.x = P0.x + mua * p21.x; //pa.x = P1.x + mua * p21.x;
-	pa.y = P0.y + mua * p21.y; //pa.y = P1.y + mua * p21.y;
-	pa.z = P0.z + mua * p21.z; //pa.z = P1.z + mua * p21.z;
-
-	pb.x = P2.x + mub * p43.x; // pb.x = P3.x + mub * p43.x;
-	pb.y = P2.y + mub * p43.y; // pb.y = P3.y + mub * p43.y;
-	pb.z = P2.z + mub * p43.z; // pb.z = P3.z + mub * p43.z;
-
-	if (std::abs(pa.x - pb.x) < epsilon && std::abs(pa.y - pb.y) < epsilon && std::abs(pa.z - pb.z) < epsilon)
-	{
-		Pt = pa;
-		return true;
-	}
-
-	return false;
-}
-
-
-void MakeRevolvedSurface(Point& S, Point& T, double theta, int m, std::vector<Point>& Pj, std::vector<double>& wj,
-	int& n, std::vector<double>& U, std::vector<std::vector<Point>>& Pij, std::vector<std::vector<double>>& wij)
-{
-	// Algorithm A8.1
-	// Create NURBS surface of revolution
-	// Input: S, T, theta, m, Pj[], wj[]
-	// Output: n, U, Pij[][], wij[][]
-
-	int narcs{};
-	double dtheta{};
-
-	if (theta <= 90.0)
-	{
-		narcs = 1;
-		U.resize(6);
-	}
-	else if (theta <= 180.0)
-	{
-		narcs = 2;
-		U.resize(8);
-		U[3] = U[4] = 0.5;
-	}
-	else if (theta <= 270.0)
-	{
-		narcs = 3;
-		U.resize(10);
-		U[3] = U[4] = 1.0 / 3.0;
-		U[5] = U[6] = 2.0 / 3.0;
+		vec[2] = sqrt(1.0 - hypotenuse * hypotenuse); // z == sqrt(r^2 - (x^2 + y^2))
 	}
 	else
 	{
-		narcs = 4;
-		U.resize(12);
-		U[3] = U[4] = 0.25;
-		U[5] = U[6] = 0.5;
-		U[7] = U[8] = 0.75;
+		vec[2] = 0.5 / hypotenuse; // z == (r^2 / 2) / sqrt(x^2 + y^2)
 	}
 
-	dtheta = theta / narcs;
-	int J{ 3 + 2 * (narcs - 1) };
-	// load end knots
-	for (int i{}; i < 3; ++J, ++i)
+	hypotenuse = std::hypot(vec[0], vec[1], vec[2]);
+
+	vec[0] /= hypotenuse;
+	vec[1] /= hypotenuse;
+	vec[2] /= hypotenuse;
+
+	//std::cout << std::format("vector: {}, {}, {}\n", vec[0], vec[1], vec[2]);
+}
+
+void onKeyStroke(unsigned char key, int x, int y)
+{
+	if (key == 'r' || key == 'R')
 	{
-		U[i] = 0.0;
-		U[J] = 1.0;
-	}
-
-	n = 2 * narcs;
-
-	double wm{ cos(dtheta * std::numbers::pi / 360.0) }; // dtheta / 2.0 is base angle
-	double angle{ 0.0 }; // compute sine and cosine only once
-	std::vector<double> cosines(narcs + 1), sines(narcs + 1);
-
-	for (int i{ 1 }; i <= narcs; ++i)
-	{
-		angle += dtheta;
-		double radAngle{ angle * std::numbers::pi / 180.0 };
-		cosines[i] = std::cos(radAngle);
-		sines[i] = std::sin(radAngle);
-	}
-
-	Point X, Y, O, P0, P2, T0, T2;
-	double r{};
-	int index{};
-
-	Pij.resize(n + 1);
-	wij.resize(n + 1);
-	for (int i{ 0 }; i <= n; ++i)
-	{
-		Pij[i].resize(m + 1);
-		wij[i].resize(m + 1);
-	}
-
-	for (int j{ 1 }; j <= m; ++j)
-	{
-		// loop and compute each u row of ctrl pts and weights
-		PointToLines(S, T, Pj[j], O);
-		X.x = Pj[j].x - O.x;
-		X.y = Pj[j].y - O.y;
-		X.z = Pj[j].z - O.z;
-		r = VecNormalize(X);
-		VecCrossProd(T, X, Y);
-
-		// Initialize first ctrl pt and weight
-		P0 = Pj[j];
-		Pij[0][j] = P0;
-		wij[0][j] = wj[j];
-		T0 = Y;
-		index = 0;
-		angle = 0.0;
-
-		for (int i{ 1 }; i <= narcs; ++i) // compute u row
-		{
-			P2.x = O.x + r * cosines[i] * X.x + r * sines[i] * Y.x;
-			P2.y = O.y + r * cosines[i] * X.y + r * sines[i] * Y.y;
-			P2.z = O.z + r * cosines[i] * X.z + r * sines[i] * Y.z;
-
-			Pij[index + 2][j] = P2;
-			wij[index + 2][j] = wj[j];
-
-			T2.x = -sines[i] * X.x + cosines[i] * Y.x;
-			T2.y = -sines[i] * X.y + cosines[i] * Y.y;
-			T2.z = -sines[i] * X.z + cosines[i] * Y.z;
-
-			//if (!Intersect3DLines(P0, P2, T0, T2, Pij[index + 1][j]))
-			if (!Intersect3DLines(P0, T0, P2, T2, Pij[index + 1][j]))
-			{
-				std::cout << "Intersect3DLines failed\n";
-			}
-			wij[index + 1][j] = wm * wj[j];
-			index += 2;
-			if (i < narcs)
-			{
-				P0 = P2;
-				T0 = T2;
-			}
-		}
+		g.zoomScale = graphics::LENGTH;
+		g.mxTransform[0][0] = -0.7071;
+		g.mxTransform[0][1] = -0.5;
+		g.mxTransform[0][2] = 0.5;
+		g.mxTransform[0][3] = 0.0;
+		g.mxTransform[1][0] = 0.7071;
+		g.mxTransform[1][1] = -0.5;
+		g.mxTransform[1][2] = 0.5;
+		g.mxTransform[1][3] = 0.0;
+		g.mxTransform[2][0] = 0.0;
+		g.mxTransform[2][1] = 0.7071;
+		g.mxTransform[2][2] = 0.7071;
+		g.mxTransform[2][3] = 0.0;
+		g.mxTransform[3][0] = 0.0;
+		g.mxTransform[3][1] = 0.0;
+		g.mxTransform[3][2] = 0.0;
+		g.mxTransform[3][3] = 1.0;
+		g.xTranslation = g.yTranslation = 0.0;
+		glutPostRedisplay();
 	}
 }
 
-
-
-int main()
+void onMouseButton(int button, int state, int x, int y)
 {
-	//void MakeRevolvedSurface(Point& S, Point& T, double theta, int m, std::vector<Point>& Pj, std::vector<double>& wj,
-	//int& n, std::vector<double>& U, std::vector<std::vector<Point>>& Pij, std::vector<std::vector<double>>& wij)
-	//S, T, theta, m, Pj[], wj[]
-	// Output: n, U, Pij[][], wij[][]
+	//std::cout << std::format("button: {}, state: {}, x: {}, y: {}\n", button, state, x, y);
+	if (button == 0 && state == 0) // left mouse button pressed
+	{
+		g.leftMouseButtonPressed = true;
+		ptTo3DVec(x, y, g.prevVec);
+	}
+	else if (button == 0 && state == 1) // left mouse button released
+	{
+		g.leftMouseButtonPressed = false;
+	}
+	else if (button == 2 && state == 0) // right mouse button pressed
+	{
+		g.rightMouseButtonPressed = true;
+		g.lastX = x;
+		g.lastY = y;
+	}
+	else if (button == 2 && state == 1) // right mouse button released
+	{
+		g.rightMouseButtonPressed = false;
+	}
+	else if (button == 3 && state == 0) // scroll forward
+	{
+		//std::cout << "scroll forward\n";
+		g.zoomScale *= 0.9;
+		glutPostRedisplay();
+	}
+	else if (button == 4 && state == 0) // scroll backward
+	{
+		//std::cout << "scroll backward\n";
+		g.zoomScale *= 1.1;
+		glutPostRedisplay();
+	}
+}
 
-	Point startPt{ 0,0,0 };
-	Point directionVec{ 0,0,1 };
-	double angle{ 360.0 };
-	int m{8};
-	std::vector<Point> controlPts{ {1, 0, 2}, {1, 0, 3}, {2, 0, 3}, {3, 0, 3}, {3, 0, 2}, {3, 0, 1}, {2, 0, 1}, {1, 0, 1}, {1, 0, 2} };
-	std::vector<double> wj{1, 0.7071, 1, 0.7071, 1, 0.7071, 1, 0.7071, 1};
+void onMouseDrag(int x, int y)
+{
+	if (g.leftMouseButtonPressed)
+	{
+		ptTo3DVec(x, y, g.currentVec);
+		//std::cout << std::format("x: {}, y: {}\n", x, y);
 
-	int n{};
-	std::vector<double> U;
-	std::vector<std::vector<Point>> Pij;
-	std::vector<std::vector<double>> wij;
+		double innerProduct{ g.currentVec[0] * g.prevVec[0] + g.currentVec[1] * g.prevVec[1] + g.currentVec[2] * g.prevVec[2] };
+		innerProduct = std::min(innerProduct, 1.0);
+		g.tractionAngle = 180.0 * acos(innerProduct) / std::numbers::pi; // in degree
+		//std::cout << std::format("angle: {}\n", tractionAngle);
 
-	MakeRevolvedSurface(startPt, directionVec, angle, m, controlPts, wj, n, U, Pij, wij);
+		g.rotationAxis[0] = g.prevVec[1] * g.currentVec[2] - g.prevVec[2] * g.currentVec[1];
+		g.rotationAxis[1] = g.prevVec[2] * g.currentVec[0] - g.prevVec[0] * g.currentVec[2];
+		g.rotationAxis[2] = g.prevVec[0] * g.currentVec[1] - g.prevVec[1] * g.currentVec[0];
+
+		//std::cout << std::format("axis: {}, {}, {}\n", rotationAxis[0], rotationAxis[1], rotationAxis[2]);
+
+		g.prevVec = g.currentVec;
+
+		glutPostRedisplay();
+	}
+	else if (g.rightMouseButtonPressed)
+	{
+		g.xTranslation += static_cast<double>(g.lastX - x) * 2.0 * g.zoomScale / glutGet(GLUT_WINDOW_WIDTH);
+		g.yTranslation += static_cast<double>(y - g.lastY) * 2.0 * g.zoomScale / glutGet(GLUT_WINDOW_HEIGHT);
+		//std::cout << std::format("xTranlation: {}, yTranslation: {}\n", xTranslation, yTranslation);
+		g.lastX = x;
+		g.lastY = y;
+		glutPostRedisplay();
+	}
+}
+
+void reshape(int x, int y)
+{
+	g.aspectRatio = static_cast<double>(y) / x; // the inverse of aspect ratio
+	glViewport(0, 0, x, y);
+}
+
+void display()
+{
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(-g.zoomScale + g.xTranslation, g.zoomScale + g.xTranslation, -g.zoomScale * g.aspectRatio + g.yTranslation, g.zoomScale * g.aspectRatio + g.yTranslation, g.sNear, g.sFar);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	if (g.leftMouseButtonPressed)
+	{
+		glPushMatrix();
+
+		glLoadIdentity();
+		glRotated(g.tractionAngle, g.rotationAxis[0], g.rotationAxis[1], g.rotationAxis[2]);
+		glMultMatrixd(&g.mxTransform[0][0]);
+		glGetDoublev(GL_MODELVIEW_MATRIX, &g.mxTransform[0][0]);
+
+		glPopMatrix();
+	}
+
+	glMultMatrixd(&g.mxTransform[0][0]);
+
+	glBegin(GL_LINES);
+	// x-axis
+	glColor3d(1.0, 0.0, 0.0);
+	glVertex3d(0.0, 0.0, 0.0);
+	glVertex3d(100.0, 0.0, 0.0);
+
+	// y-axis
+	glColor3d(0.0, 1.0, 0.0);
+	glVertex3d(0.0, 0.0, 0.0);
+	glVertex3d(0.0, 100.0, 0.0);
+
+	// z-axis
+	glColor3d(0.0, 0.0, 1.0);
+	glVertex3d(0.0, 0.0, 0.0);
+	glVertex3d(0.0, 0.0, 100.0);
+	glEnd();
+
+	// 'x'
+	double tx{ 100.0 * g.mxTransform[0][0] + g.mxTransform[3][0] };
+	double ty{ 100.0 * g.mxTransform[0][1] + g.mxTransform[3][1] };
+	double tz{ 100.0 * g.mxTransform[0][2] + g.mxTransform[3][2] };
+
+	glColor3d(1.0, 0.0, 0.0);
+
+	glPushMatrix();
+	glLoadIdentity();
+	glTranslated(tx, ty, tz);
+	glScaled(0.1, 0.1, 0.1);
+	glutStrokeCharacter(GLUT_STROKE_MONO_ROMAN, 'x');
+	glPopMatrix();
+
+	// 'y'
+	tx = 100.0 * g.mxTransform[1][0] + g.mxTransform[3][0];
+	ty = 100.0 * g.mxTransform[1][1] + g.mxTransform[3][1];
+	tz = 100.0 * g.mxTransform[1][2] + g.mxTransform[3][2];
+
+	glColor3d(0.0, 1.0, 0.0);
+
+	glPushMatrix();
+	glLoadIdentity();
+	glTranslated(tx, ty, tz);
+	glScaled(0.1, 0.1, 0.1);
+	glutStrokeCharacter(GLUT_STROKE_MONO_ROMAN, 'y');
+	glPopMatrix();
+
+	// 'z'
+	tx = 100.0 * g.mxTransform[2][0] + g.mxTransform[3][0];
+	ty = 100.0 * g.mxTransform[2][1] + g.mxTransform[3][1];
+	tz = 100.0 * g.mxTransform[2][2] + g.mxTransform[3][2];
+
+	glColor3d(0.0, 0.0, 1.0);
+
+	glPushMatrix();
+	glLoadIdentity();
+	glTranslated(tx, ty, tz);
+	glScaled(0.1, 0.1, 0.1);
+	glutStrokeCharacter(GLUT_STROKE_MONO_ROMAN, 'z');
+	glPopMatrix();
+
+	glColor3d(1.0, 1.0, 1.0);
+	Point3D pt{};
+	for (double u{}; u <= 1.0; u += 0.05)
+	{
+		glBegin(GL_LINE_STRIP); // glBegin(GL_POINTS);
+		for (double v{}; v <= 1.0; v += 0.05)
+		{
+			torus.surfacePoint(u, v, pt);
+			//std::cout << std::format("u: {:15.5f}, v: {:15.5f}, ({:15.5f}, {:15.5f}, {:15.5f})\n", u, v, pt.x, pt.y, pt.z);
+			glVertex3d(pt.x, pt.y, pt.z);
+		}
+		glEnd();
+	}
+
+	glutSwapBuffers();
+}
+
+int main(int argc, char** argv)
+{
+	try {
+
+		Point3D startPt{ 0,0,0 };
+		Point3D directionVec{ 0,0,1 };
+		double angle{ 360.0 };
+		int m{ 8 };
+		std::vector<Point3D> controlPts{ {10, 0, 20}, {10, 0, 30}, {20, 0, 30}, {30, 0, 30}, {30, 0, 20}, {30, 0, 10}, {20, 0, 10}, {10, 0, 10}, {10, 0, 20} };
+		std::vector<double> wj{ 1, 0.7071, 1, 0.7071, 1, 0.7071, 1, 0.7071, 1 };
+
+		int n{};
+		std::vector<double> U;
+		std::vector<std::vector<Point3D>> Pij;
+		std::vector<std::vector<double>> wij;
+
+		MakeRevolvedSurface(startPt, directionVec, angle, m, controlPts, wj, n, U, Pij, wij);
+
+		for (const auto& v : Pij)
+		{
+			torus.addVector(v);
+		}
+
+		//torus.makeKnots();
+		torus.assignUKnots(U);
+		torus.assignVKnots(U);
+
+		glutInit(&argc, argv);
+		glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+		glutInitWindowSize(600, 600);
+		glutCreateWindow("B-spline Surface");
+		glutDisplayFunc(display);
+		glutReshapeFunc(reshape);
+		glutMouseFunc(onMouseButton);
+		glutMotionFunc(onMouseDrag);
+		glutKeyboardFunc(onKeyStroke);
+		glutMainLoop();
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+	}
+	catch (...)
+	{
+		std::cerr << "error\n";
+	}
 }
