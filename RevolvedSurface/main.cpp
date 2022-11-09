@@ -58,44 +58,57 @@ void VecCrossProd(const Point& a, const Point& b, Point& c)
 	c.z = a.x * b.y - a.y * b.x;
 }
 
-bool Intersect3DLines(const Point& P1, const Point& P2, const Point& P3, const Point& P4, Point& Pt)
+bool Intersect3DLines(const Point& P0, const Point& T0, const Point& P2, const Point& T2, Point& Pt)
 {
 	/*
+	Original code from
 	http://paulbourke.net/geometry/pointlineplane/
     Calculate the line segment PaPb that is the shortest route between
     two lines P1P2 and P3P4. Calculate also the values of mua and mub where
-        Pa = P1 + mua (P2 - P1)
-        Pb = P3 + mub (P4 - P3)
+        Pa = P1 + mua (P2 - P1) (1)
+        Pb = P3 + mub (P4 - P3) (2)
     Return true if Pa == Pb
 
-	Input: P1, P2, P3, P4
+	In this algorithm
+	Input, (the point, tangent) pairs: (P0, T0), (P2, T2)
 	Output: Pt => intersection point if return value is true
+
+	Therefore, (1) and (2) become
+	Pa = P0 + mua * T0
+	Pb = P2 + mub * T2
+
+	Pa == Pb => inteersection point
 	*/
 
 	Point p13, p43, p21;
 
-	p13.x = P1.x - P3.x;
-	p13.y = P1.y - P3.y;
-	p13.z = P1.z - P3.z;
+	p13.x = P0.x - P2.x; // p13.x = P1.x - P3.x;
+	p13.y = P0.y - P2.y; // p13.y = P1.y - P3.y;
+	p13.z = P0.z - P2.z; // p13.z = P1.z - P3.z;
 
-	p43.x = P4.x - P3.x;
-	p43.y = P4.y - P3.y;
-	p43.z = P4.z - P3.z;
+	// p43 is T2
+	p43 = T2;
+
+	//p43.x = P4.x - P3.x;
+	//p43.y = P4.y - P3.y;
+	//p43.z = P4.z - P3.z;
 
 	if (std::abs(p43.x) < epsilon && std::abs(p43.y) < epsilon && std::abs(p43.z) < epsilon)
 	{
 		return false;
 	}
 
-	p21.x = P2.x - P1.x;
-	p21.y = P2.y - P1.y;
-	p21.z = P2.z - P1.z;
+	// p21 is T0
+	p21 = T0;
+
+	//p21.x = P2.x - P1.x;
+	//p21.y = P2.y - P1.y;
+	//p21.z = P2.z - P1.z;
 
 	if (std::abs(p21.x) < epsilon && std::abs(p21.y) < epsilon && std::abs(p21.z) < epsilon)
 	{
 		return false;
 	}
-	
 
 	double d1343 { p13.x * p43.x + p13.y * p43.y + p13.z * p43.z};
 	double d4321 { p43.x * p21.x + p43.y * p21.y + p43.z * p21.z};
@@ -116,13 +129,13 @@ bool Intersect3DLines(const Point& P1, const Point& P2, const Point& P3, const P
 	double mub{ (d1343 + d4321 * mua) / d4343 };
 
 	Point pa, pb;
-	pa.x = P1.x + mua * p21.x;
-	pa.y = P1.y + mua * p21.y;
-	pa.z = P1.z + mua * p21.z;
+	pa.x = P0.x + mua * p21.x; //pa.x = P1.x + mua * p21.x;
+	pa.y = P0.y + mua * p21.y; //pa.y = P1.y + mua * p21.y;
+	pa.z = P0.z + mua * p21.z; //pa.z = P1.z + mua * p21.z;
 
-	pb.x = P3.x + mub * p43.x;
-	pb.y = P3.y + mub * p43.y;
-	pb.z = P3.z + mub * p43.z;
+	pb.x = P2.x + mub * p43.x; // pb.x = P3.x + mub * p43.x;
+	pb.y = P2.y + mub * p43.y; // pb.y = P3.y + mub * p43.y;
+	pb.z = P2.z + mub * p43.z; // pb.z = P3.z + mub * p43.z;
 
 	if (std::abs(pa.x - pb.x) < epsilon && std::abs(pa.y - pb.y) < epsilon && std::abs(pa.z - pb.z) < epsilon)
 	{
@@ -201,10 +214,10 @@ void MakeRevolvedSurface(Point& S, Point& T, double theta, int m, std::vector<Po
 
 	Pij.resize(n + 1);
 	wij.resize(n + 1);
-	for (int j{ 0 }; j <= n; ++j)
+	for (int i{ 0 }; i <= n; ++i)
 	{
-		Pij[j].resize(m + 1);
-		wij[j].resize(m + 1);
+		Pij[i].resize(m + 1);
+		wij[i].resize(m + 1);
 	}
 
 	for (int j{ 1 }; j <= m; ++j)
@@ -218,7 +231,8 @@ void MakeRevolvedSurface(Point& S, Point& T, double theta, int m, std::vector<Po
 		VecCrossProd(T, X, Y);
 
 		// Initialize first ctrl pt and weight
-		Pij[0][j] = P0 = Pj[j];
+		P0 = Pj[j];
+		Pij[0][j] = P0;
 		wij[0][j] = wj[j];
 		T0 = Y;
 		index = 0;
@@ -236,8 +250,9 @@ void MakeRevolvedSurface(Point& S, Point& T, double theta, int m, std::vector<Po
 			T2.x = -sines[i] * X.x + cosines[i] * Y.x;
 			T2.y = -sines[i] * X.y + cosines[i] * Y.y;
 			T2.z = -sines[i] * X.z + cosines[i] * Y.z;
-			if (!Intersect3DLines(P0, P2, T0, T2, Pij[index + 1][j]))
-			//if (!Intersect3DLines(P0, T0, P2, T2, Pij[index + 1][j]))
+
+			//if (!Intersect3DLines(P0, P2, T0, T2, Pij[index + 1][j]))
+			if (!Intersect3DLines(P0, T0, P2, T2, Pij[index + 1][j]))
 			{
 				std::cout << "Intersect3DLines failed\n";
 			}
