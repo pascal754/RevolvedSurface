@@ -257,13 +257,24 @@ void display()
 
 	glColor3d(1.0, 1.0, 1.0);
 	Point3D pt{};
-	for (double u{}; u <= 1.0; u += 0.05)
+	for (int u{}; u <= 20; ++u)
 	{
 		glBegin(GL_LINE_STRIP); // glBegin(GL_POINTS);
-		for (double v{}; v <= 1.0; v += 0.05)
+		for (int v{}; v <= 20; ++v)
 		{
-			torus.surfacePoint(u, v, pt);
+			torus.surfacePointW(u / 20.0, v / 20.0, pt);
 			//std::cout << std::format("u: {:15.5f}, v: {:15.5f}, ({:15.5f}, {:15.5f}, {:15.5f})\n", u, v, pt.x, pt.y, pt.z);
+			glVertex3d(pt.x, pt.y, pt.z);
+		}
+		glEnd();
+	}
+
+	for (int u{}; u <= 20; ++u)
+	{
+		glBegin(GL_LINE_STRIP); // glBegin(GL_POINTS);
+		for (int v{}; v <= 20; ++v)
+		{
+			torus.surfacePointW(v / 20.0, u / 20.0, pt);
 			glVertex3d(pt.x, pt.y, pt.z);
 		}
 		glEnd();
@@ -278,7 +289,7 @@ int main(int argc, char** argv)
 
 		Point3D startPt{ 0,0,0 };
 		Point3D directionVec{ 0,0,1 };
-		double angle{ 270.0 };
+		double angle{ 360.0 };
 		int m{ 8 };
 		std::vector<Point3D> controlPts{ {10, 0, 20}, {10, 0, 30}, {20, 0, 30}, {30, 0, 30}, {30, 0, 20}, {30, 0, 10}, {20, 0, 10}, {10, 0, 10}, {10, 0, 20} };
 		std::vector<double> wj{ 1, 0.7071, 1, 0.7071, 1, 0.7071, 1, 0.7071, 1 };
