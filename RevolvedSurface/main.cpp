@@ -37,7 +37,8 @@ const double graphics::oneOverSquareRoot2{ 1.0 / sqrt(2.0) };
 
 graphics g{};
 
-BsplineSurface torus{ 2, 2 };
+BsplineSurface torus{ 2, 2 }; // first one should be 2; revolution is a circle => degree of two
+BsplineSurface gs{ 2, 3 };
 
 void ptTo3DVec(int x, int y, std::array<double, 3>& vec)
 {
@@ -257,6 +258,8 @@ void display()
 
 	glColor3d(1.0, 1.0, 1.0);
 	Point3D pt{};
+
+	// draw torus
 	for (int u{}; u <= 20; ++u)
 	{
 		glBegin(GL_LINE_STRIP); // glBegin(GL_POINTS);
@@ -280,38 +283,93 @@ void display()
 		glEnd();
 	}
 
+	// draw general surface
+	for (int u{}; u <= 20; ++u)
+	{
+		glBegin(GL_LINE_STRIP); // glBegin(GL_POINTS);
+		for (int v{}; v <= 20; ++v)
+		{
+			gs.surfacePointW(u / 20.0, v / 20.0, pt);
+			glVertex3d(pt.x, pt.y, pt.z);
+		}
+		glEnd();
+	}
+
+	for (int u{}; u <= 20; ++u)
+	{
+		glBegin(GL_LINE_STRIP); // glBegin(GL_POINTS);
+		for (int v{}; v <= 20; ++v)
+		{
+			gs.surfacePointW(v / 20.0, u / 20.0, pt);
+			glVertex3d(pt.x, pt.y, pt.z);
+		}
+		glEnd();
+	}
+
 	glutSwapBuffers();
+}
+
+void makeTorus()
+{
+	// make torus
+	Point3D startPt{ 0,0,0 };
+	Point3D directionVec{ 0,0,1 };
+	double angle{ 360.0 };
+	int m{ 8 };
+	std::vector<Point3D> controlPts{ {10, 0, 20}, {10, 0, 30}, {20, 0, 30}, {30, 0, 30}, {30, 0, 20}, {30, 0, 10}, {20, 0, 10}, {10, 0, 10}, {10, 0, 20} };
+	std::vector<double> wj{ 1, 0.7071, 1, 0.7071, 1, 0.7071, 1, 0.7071, 1 };
+	std::vector<double> V{ 0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1 };
+
+	int n{};
+	std::vector<double> U;
+	std::vector<std::vector<Point3D>> Pij;
+	std::vector<std::vector<double>> wij;
+
+	MakeRevolvedSurface(startPt, directionVec, angle, m, controlPts, wj, n, U, Pij, wij);
+
+	torus.assignControlPoints(Pij);
+	torus.assignWeight(wij);
+
+	torus.assignUKnots(U);
+	torus.assignVKnots(V);
+}
+
+void makeGeneralSurface()
+{
+	// make torus
+	Point3D startPt{ 0, 50, 0 };
+	Point3D directionVec{ 1, 0, 0 };
+	double angle{ 360.0 };
+	int m{ 11 };
+	std::vector<Point3D> controlPts{ {20, 40, 0}, {25, 35, 0}, {30, 30, 0}, {40, 30, 0}, {45, 35, 0}, {50, 40, 0}, {55, 45, 0}, {60, 45, 0}, {70, 40, 0}, {75, 35, 0}, {80, 35, 0}, {85, 30, 0} };
+	std::vector<double> wj{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+	std::vector<double> V{ 0, 0, 0, 0, 0.111111, 0.222222, 0.333333, 0.444444, 0.555555, 0.666666, 0.777777, 0.888888, 1, 1, 1, 1 };
+	//std::vector<double> V{ 0, 0, 0, 0.111111, 0.222222, 0.333333, 0.444444, 0.555555, 0.666666, 0.777777, 0.888888, 1, 1, 1 };
+
+	int n{};
+	std::vector<double> U;
+	std::vector<std::vector<Point3D>> Pij;
+	std::vector<std::vector<double>> wij;
+
+	MakeRevolvedSurface(startPt, directionVec, angle, m, controlPts, wj, n, U, Pij, wij);
+
+	gs.assignControlPoints(Pij);
+	gs.assignWeight(wij);
+
+	gs.assignUKnots(U);
+	gs.assignVKnots(V);
 }
 
 int main(int argc, char** argv)
 {
 	try {
-
-		Point3D startPt{ 0,0,0 };
-		Point3D directionVec{ 0,0,1 };
-		double angle{ 360.0 };
-		int m{ 8 };
-		std::vector<Point3D> controlPts{ {10, 0, 20}, {10, 0, 30}, {20, 0, 30}, {30, 0, 30}, {30, 0, 20}, {30, 0, 10}, {20, 0, 10}, {10, 0, 10}, {10, 0, 20} };
-		std::vector<double> wj{ 1, 0.7071, 1, 0.7071, 1, 0.7071, 1, 0.7071, 1 };
-		std::vector<double> V{ 0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1 };
-
-		int n{};
-		std::vector<double> U;
-		std::vector<std::vector<Point3D>> Pij;
-		std::vector<std::vector<double>> wij;
-
-		MakeRevolvedSurface(startPt, directionVec, angle, m, controlPts, wj, n, U, Pij, wij);
-
-		torus.assignControlPoints(Pij);
-		torus.assignWeight(wij);
-
-		torus.assignUKnots(U);
-		torus.assignVKnots(V);
+		makeTorus();
+		makeGeneralSurface();
 
 		glutInit(&argc, argv);
 		glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
 		glutInitWindowSize(600, 600);
-		glutCreateWindow("B-spline Surface");
+		glutCreateWindow("Surface of Revolution");
 		glutDisplayFunc(display);
 		glutReshapeFunc(reshape);
 		glutMouseFunc(onMouseButton);

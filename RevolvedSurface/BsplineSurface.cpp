@@ -124,14 +124,15 @@ void BsplineSurface::surfacePoint(double u, double v, Point3D& S)
 			temp[L].y += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].y;
 			temp[L].z += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].z;
 		}
+	}
 
-		S.x = S.y = S.z = 0.0;
-		for (int L{}; L <= q_degree; ++L)
-		{
-			S.x += vBasis[L] * temp[L].x;
-			S.y += vBasis[L] * temp[L].y;
-			S.z += vBasis[L] * temp[L].z;
-		}
+	S.x = S.y = S.z = 0.0;
+
+	for (int L{}; L <= q_degree; ++L)
+	{
+		S.x += vBasis[L] * temp[L].x;
+		S.y += vBasis[L] * temp[L].y;
+		S.z += vBasis[L] * temp[L].z;
 	}
 }
 
@@ -159,21 +160,23 @@ void BsplineSurface::surfacePointW(double u, double v, Point3D& S)
 			temp[L].x += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].x * weight[uspan - p_degree + k][vspan - q_degree + L];
 			temp[L].y += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].y * weight[uspan - p_degree + k][vspan - q_degree + L];
 			temp[L].z += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].z * weight[uspan - p_degree + k][vspan - q_degree + L];
-			tempW[L] += uBasis[k] * weight[uspan - p_degree + k][vspan - q_degree + L];
+			tempW[L]  += uBasis[k] * weight[uspan - p_degree + k][vspan - q_degree + L];
 		}
-
-		S.x = S.y = S.z = Sw = 0.0;
-		for (int L{}; L <= q_degree; ++L)
-		{
-			S.x += vBasis[L] * temp[L].x;
-			S.y += vBasis[L] * temp[L].y;
-			S.z += vBasis[L] * temp[L].z;
-			Sw += vBasis[L] * tempW[L];
-		}
-		S.x /= Sw;
-		S.y /= Sw;
-		S.z /= Sw;
 	}
+
+	S.x = S.y = S.z = Sw = 0.0;
+	
+	for (int L{}; L <= q_degree; ++L)
+	{
+		S.x += vBasis[L] * temp[L].x;
+		S.y += vBasis[L] * temp[L].y;
+		S.z += vBasis[L] * temp[L].z;
+		Sw  += vBasis[L] * tempW[L];
+	}
+
+	S.x /= Sw;
+	S.y /= Sw;
+	S.z /= Sw;
 }
 
 void BsplineSurface::addVector(const std::vector<Point3D>& vPt)
