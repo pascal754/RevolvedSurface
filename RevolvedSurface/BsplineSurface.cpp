@@ -147,25 +147,32 @@ void BsplineSurface::surfacePointW(double u, double v, Point3D& S)
 	basisFuns(vspan, v, q_degree, vKnots, vBasis);
 
 	std::vector<Point3D> temp(q_degree + 1);
-	double w{};
+	std::vector<double> tempW(q_degree + 1);
+
+	double Sw{};
 
 	for (int L{}; L <= q_degree; ++L)
 	{
-		temp[L].x = temp[L].y = temp[L].z = 0.0;
+		temp[L].x = temp[L].y = temp[L].z = tempW[L] = 0.0;
 		for (int k{}; k <= p_degree; ++k)
 		{
-			temp[L].x += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].x;
-			temp[L].y += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].y;
-			temp[L].z += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].z;
+			temp[L].x += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].x * weight[uspan - p_degree + k][vspan - q_degree + L];
+			temp[L].y += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].y * weight[uspan - p_degree + k][vspan - q_degree + L];
+			temp[L].z += uBasis[k] * controlPoints[uspan - p_degree + k][vspan - q_degree + L].z * weight[uspan - p_degree + k][vspan - q_degree + L];
+			tempW[L] += uBasis[k] * weight[uspan - p_degree + k][vspan - q_degree + L];
 		}
 
-		S.x = S.y = S.z = w = 0.0;
+		S.x = S.y = S.z = Sw = 0.0;
 		for (int L{}; L <= q_degree; ++L)
 		{
 			S.x += vBasis[L] * temp[L].x;
 			S.y += vBasis[L] * temp[L].y;
 			S.z += vBasis[L] * temp[L].z;
+			Sw += vBasis[L] * tempW[L];
 		}
+		S.x /= Sw;
+		S.y /= Sw;
+		S.z /= Sw;
 	}
 }
 
@@ -180,13 +187,23 @@ void BsplineSurface::makeKnots()
 	makeKnots(static_cast<int>(std::ssize(controlPoints.front())), q_degree, vKnots);
 }
 
-void BsplineSurface::assignUKnots(const std::vector<double> kv)
+void BsplineSurface::assignUKnots(const std::vector<double>& kv)
 {
 	uKnots = kv;
 }
 
 
-void BsplineSurface::assignVKnots(const std::vector<double> kv)
+void BsplineSurface::assignVKnots(const std::vector<double>& kv)
 {
 	vKnots = kv;
+}
+
+void BsplineSurface::assignControlPoints(const std::vector<std::vector<Point3D>>& cp)
+{
+	controlPoints = cp;
+}
+
+void BsplineSurface::assignWeight(const std::vector<std::vector<double>>& w)
+{
+	weight = w;
 }

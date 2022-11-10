@@ -291,12 +291,9 @@ int main(int argc, char** argv)
 
 		MakeRevolvedSurface(startPt, directionVec, angle, m, controlPts, wj, n, U, Pij, wij);
 
-		for (const auto& v : Pij)
-		{
-			torus.addVector(v);
-		}
+		torus.assignControlPoints(Pij);
+		torus.assignWeight(wij);
 
-		//torus.makeKnots();
 		torus.assignUKnots(U);
 		torus.assignVKnots(V);
 
