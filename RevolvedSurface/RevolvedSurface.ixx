@@ -7,7 +7,7 @@ import <cmath>;
 
 import Point3D;
 
-const double epsilon{ 1e-6 };
+constexpr double epsilon{ 1e-6 };
 
 export double VecNormalize(Point3D& pt)
 {
