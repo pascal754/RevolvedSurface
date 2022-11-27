@@ -139,6 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\..\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\MSVC\14.35.32019\modules\std.ixx" />
     <ClCompile Include="BsplineSurface.cpp" />
     <ClCompile Include="BsplineSurface.ixx" />
     <ClCompile Include="main.cpp" />

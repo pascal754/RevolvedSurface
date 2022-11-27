@@ -5,7 +5,7 @@ export module Point3D;
 
 export struct Point3D
 {
-	double x{};
-	double y{};
-	double z{};
+    double x{};
+    double y{};
+    double z{};
 };
