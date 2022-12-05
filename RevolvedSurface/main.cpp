@@ -356,6 +356,8 @@ void makeGeneralSurface()
 int main(int argc, char** argv)
 {
     try {
+        
+
         makeTorus();
         makeGeneralSurface();
 
@@ -363,6 +365,15 @@ int main(int argc, char** argv)
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
         glutInitWindowSize(600, 600);
         glutCreateWindow("Surface of Revolution");
+
+        // Antialiasing
+        glEnable(GL_LINE_SMOOTH);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+        glLineWidth(1.5f);
+        glPointSize(1.5f);
+
         glutDisplayFunc(display);
         glutReshapeFunc(reshape);
         glutMouseFunc(onMouseButton);
