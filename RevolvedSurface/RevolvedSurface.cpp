@@ -26,7 +26,7 @@ void PointToLines(const Point3D& S, const Point3D& T, const Point3D& Pt, Point3D
     // T: unit direction vector
     // O: Projected Point
 
-    double dotProduct{ S.x * T.x + S.y * T.y + S.z * T.z };
+    // double dotProduct{ S.x * T.x + S.y * T.y + S.z * T.z };
     O.x = S.x + (Pt.x - S.x) * T.x * T.x;
     O.y = S.y + (Pt.y - S.y) * T.y * T.y;
     O.z = S.z + (Pt.z - S.z) * T.z * T.z;
