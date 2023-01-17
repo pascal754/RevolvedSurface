@@ -3,8 +3,6 @@
 
 module BsplineSurface;
 
-import std;
-
 void BsplineSurface::makeKnots(int size, int degree, std::vector<double>& knotVector)
 { // make uniform internal knots
     // n + 1 > p

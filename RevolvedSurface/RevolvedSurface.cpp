@@ -1,6 +1,5 @@
 module RevolvedSurface;
 
-import std;
 import Point3D;
 
 constexpr double epsilon{ 1e-6 };
