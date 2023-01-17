@@ -16,7 +16,7 @@ Surface of Revolution
 ## Development tools
 
 - Microsoft Visual Studio Community 2022 (64-bit) - Preview
-Version 17.5.0 Preview 1.0 (C++20)
+Version 17.5.0 Preview 1.0 (C++23: modules and standard library support)
 
 - OpenGL via vcpkg
 
